@@ -1,0 +1,92 @@
+#!/bin/bash
+
+# Configuration & Build
+CONFIG_IDF_VERSION=$(cat sdkconfig.defaults | grep CONFIG_SDK_VERSION | awk -F '"' '{print $2}')
+SW_VERSION=$(cat sdkconfig.defaults | grep CONFIG_SW_VERSION | awk -F '"' '{print $2}')
+IDF_VERSION=v${IDF_PATH##*v}
+if [ "$CONFIG_IDF_VERSION" != "$IDF_VERSION" ]; then
+    echo "The current SDK environment `$IDF_PATH` does not match the application."
+
+    IDF_PATH="../../../../sdk/esp-idf-$CONFIG_IDF_VERSION"
+
+    ../../script/bootstrap $IDF_PATH
+    . $IDF_PATH/export.sh
+fi
+
+echo "IDF_PATH=$IDF_PATH"
+echo "CONFIG_IDF_VERSION=$CONFIG_IDF_VERSION"
+
+OT_VERSION=$(git -C $IDF_PATH/components/openthread/openthread/ log -1 --pretty="%cs-%h")
+
+OT_RCP_PATH=$IDF_PATH/examples/openthread/ot_rcp
+echo "OT_RCP_PATH=$OT_RCP_PATH"
+
+cd $OT_RCP_PATH && idf.py --preview set-target esp32h2 && idf.py build && cd -
+
+idf.py build
+
+# Format Output
+[ $? = 0 ] && {
+    TMP_OUTPUT_DIR=$(pwd)/bin
+    rm -rf $TMP_OUTPUT_DIR
+    mkdir -p $TMP_OUTPUT_DIR
+
+    fw_version=v$(cat sdkconfig.defaults | grep CONFIG_SW_VERSION | awk -F '"' '{print $2}')
+
+    cp build/rcp_fw.bin $TMP_OUTPUT_DIR/s20-ot-rcp-fw-$fw_version.bin
+    cp build/ota_data_initial.bin $TMP_OUTPUT_DIR/s20-ot-ota-data-initial-$fw_version.bin
+    cp build/esp_ot_br.bin $TMP_OUTPUT_DIR/s20-ot-br-$fw_version.bin
+    cp build/esp_ot_br.elf $TMP_OUTPUT_DIR/s20-ot-br-$fw_version.elf
+    cp build/web_storage.bin $TMP_OUTPUT_DIR/s20-ot-web-storage-$fw_version.bin
+    cp build/bootloader/bootloader.bin $TMP_OUTPUT_DIR/s20-ot-bootloader-$fw_version.bin
+    cp build/partition_table/partition-table.bin $TMP_OUTPUT_DIR/s20-ot-partition-table-$fw_version.bin
+    cp build/partitions.csv $TMP_OUTPUT_DIR/s20-ot-partitions-$fw_version.csv
+    cp build/flash_args $TMP_OUTPUT_DIR/s20-ot-flash-args-$fw_version.txt
+
+    combine_fw_name="s20-ot-combine-$fw_version.bin"
+    idf_target=$(cat sdkconfig | grep CONFIG_IDF_TARGET= | awk -F '"' '{print $2}')
+
+    cd build/
+    esptool.py --chip $idf_target merge_bin --output $TMP_OUTPUT_DIR/$combine_fw_name $(cat ./flash_args)
+    cd ..
+
+    # Generate list.txt
+    LIST_FILE=$TMP_OUTPUT_DIR/list.txt
+    [ -f $LIST_FILE ] && rm $LIST_FILE
+    for img in $(ls -d $TMP_OUTPUT_DIR/*.bin); do
+        img_name=${img##*/}
+        img_md5sum=$(md5sum $img | awk '{print $1}')
+        img_siez=$(stat -c %s $img)
+        echo -e "$SW_VERSION\t$img_name\t$img_md5sum\t$img_siez" >>$LIST_FILE
+    done
+
+    # Generate metadata
+    jq -n -S \
+    --arg release "$SW_VERSION" \
+    --arg esp_idf "$CONFIG_IDF_VERSION" \
+    --arg openthread "$OT_VERSION" \
+    --arg target "$(grep CONFIG_IDF_TARGET sdkconfig.defaults | awk -F '"' '{print $2}')" \
+    --arg date "$(date "+%Y-%m-%d %H:%M:%S")" \
+    --arg release_note "$([ -f RELEASE_NOTE.md ] && cat RELEASE_NOTE.md || echo '')" \
+    '
+    {
+        version: {
+        release: $release,
+        "esp-idf": $esp_idf,
+        openthread: $openthread,
+        target: $target,
+        date: $date
+        },
+        release_note: $release_note
+    }
+    ' > "$TMP_OUTPUT_DIR/metadata_$SW_VERSION"
+
+    OUTPUT_DIR=$1
+    [ -n "$OUTPUT_DIR" ] && {
+        OUTPUT_DIR=$(realpath $OUTPUT_DIR)
+        mkdir -p $OUTPUT_DIR
+        tar -zcvf $OUTPUT_DIR/blink.tar.gz $TMP_OUTPUT_DIR/*
+    }
+
+    exit 0
+}

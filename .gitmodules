@@ -1,0 +1,3 @@
+[submodule "esp-thread-br"]
+	path = esp-thread-br
+	url = https://github.com/espressif/esp-thread-br.git

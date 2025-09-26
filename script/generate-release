@@ -1,0 +1,93 @@
+#!/bin/bash
+
+OUTPUT_DIR="s20otbr"
+[ -n "$1" ] && OUTPUT_DIR=$1
+[ ! -d "$OUTPUT_DIR" ] && mkdir -p $OUTPUT_DIR
+
+rm -fr $OUTPUT_DIR/*
+
+# firmware ouput
+flash_args=$(cat ./build/flash_args)
+fw_version_root=$(cat version.txt)
+fw_version="-v"$fw_version_root
+combine_fw_name="gl-s20-otbr-combine"$fw_version".bin"
+idf_target=$(cat ./sdkconfig | grep CONFIG_IDF_TARGET=)
+idf_target=${idf_target#$"CONFIG_IDF_TARGET="}
+idf_target=${idf_target#\"}
+idf_target=${idf_target%\"}
+cd ./build
+esptool.py --chip ${idf_target} merge_bin --output "${combine_fw_name}" ${flash_args}
+cd ..
+
+# find build -name "*.bin" -exec cp {} "$OUTPUT_DIR" \;
+cp build/$combine_fw_name $OUTPUT_DIR/$combine_fw_name
+cp build/rcp_fw.bin $OUTPUT_DIR/"gl-s20-otbr-rcp"$fw_version".bin"
+cp build/gl-s20-otbr.bin $OUTPUT_DIR/"gl-s20-otbr"$fw_version".bin"
+cp build/web_storage.bin $OUTPUT_DIR/"gl-s20-otbr-web"$fw_version".bin"
+
+# calculate md5 and size
+cd $OUTPUT_DIR
+combine_md5=$(md5sum ./$combine_fw_name | cut -d" " -f1)
+app_md5=$(md5sum ./"gl-s20-otbr"$fw_version".bin" | cut -d" " -f1)
+rcp_md5=$(md5sum ./"gl-s20-otbr-rcp"$fw_version".bin" | cut -d" " -f1)
+web_md5=$(md5sum ./"gl-s20-otbr-web"$fw_version".bin" | cut -d" " -f1)
+combine_size=$(ls -l ./$combine_fw_name | awk '{print $5}')
+app_size=$(ls -l ./"gl-s20-otbr"$fw_version".bin" | awk '{print $5}')
+rcp_size=$(ls -l ./"gl-s20-otbr-rcp"$fw_version".bin" | awk '{print $5}')
+web_size=$(ls -l ./"gl-s20-otbr-web"$fw_version".bin" | awk '{print $5}')
+
+# create list.txt
+touch ./list.txt
+echo -e $fw_version_root"\t""gl-s20-otbr"$fw_version".bin""\t"$app_md5"\t"$app_size >>./list.txt
+echo -e $fw_version_root"\t""gl-s20-otbr-rcp"$fw_version".bin""\t"$rcp_md5"\t"$rcp_size >>./list.txt
+echo -e $fw_version_root"\t""gl-s20-otbr-web"$fw_version".bin""\t"$web_md5"\t"$web_size >>./list.txt
+
+# create release docs
+mkdir -p ./release
+cd ./release
+tar_name="s20otbr-"$fw_version_root$(date +"-%m%d")
+mkdir -p $tar_name
+cp -r ../"gl-s20-otbr"$fw_version".bin" ./$tar_name
+cp -r ../"gl-s20-otbr-rcp"$fw_version".bin" ./$tar_name
+cp -r ../"gl-s20-otbr-web"$fw_version".bin" ./$tar_name
+cp -r ../$combine_fw_name ./$tar_name
+touch ./$tar_name/list.txt
+echo -e $fw_version_root"\t""gl-s20-otbr"$fw_version".bin""\t"$app_md5"\t"$app_size >>./$tar_name/list.txt
+echo -e $fw_version_root"\t""gl-s20-otbr-rcp"$fw_version".bin""\t"$rcp_md5"\t"$rcp_size >>./$tar_name/list.txt
+echo -e $fw_version_root"\t""gl-s20-otbr-web"$fw_version".bin""\t"$web_md5"\t"$web_size >>./$tar_name/list.txt
+echo -e $fw_version_root"\t"$combine_fw_name"\t"$combine_md5"\t"$combine_size >>./$tar_name/list.txt
+tar -cvf $tar_name".tar" $tar_name
+
+# create tar list.txt
+touch ./list.txt
+tar_file_md5=$(md5sum ./$tar_name".tar" | cut -d" " -f1)
+tar_file_size=$(ls -l ./$tar_name".tar" | awk '{print $5}')
+echo -e $fw_version_root"\t"$tar_name".tar""\t"$tar_file_md5"\t"$tar_file_size >>./list.txt
+
+# create metadata
+metadata_name="metadata_"$fw_version_root
+cat >$metadata_name <<EOF
+{
+    "metadata_version": "1.1",
+    "compat_version": "1.0",
+    "supported_devices": [
+        "glinet,s20"
+    ],
+    "version": {
+        "release": "2.0.0",
+        "date": "",
+        "dist": "Esp",
+        "version": "v5.1.2-1-g2714a8ad0e-dirty",
+        "firmware_type": "release1",
+        "revision": "r16399+159-c67509efd7",
+        "target": "esp32s3",
+        "board": "glinet_s20"
+    },
+    "upgrade_control": "",
+    "release_note": ""
+}
+EOF
+
+# clean the unuse file
+rm -fr $tar_name
+rm -fr ../$combine_fw_name
