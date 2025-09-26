@@ -3,15 +3,6 @@
 # Configuration & Build
 CONFIG_IDF_VERSION=$(cat sdkconfig.defaults | grep CONFIG_SDK_VERSION | awk -F '"' '{print $2}')
 SW_VERSION=$(cat sdkconfig.defaults | grep CONFIG_SW_VERSION | awk -F '"' '{print $2}')
-IDF_VERSION=v${IDF_PATH##*v}
-if [ "$CONFIG_IDF_VERSION" != "$IDF_VERSION" ]; then
-    echo "The current SDK environment `$IDF_PATH` does not match the application."
-
-    IDF_PATH="../../../../sdk/esp-idf-$CONFIG_IDF_VERSION"
-
-    ../../script/bootstrap $IDF_PATH
-    . $IDF_PATH/export.sh
-fi
 
 echo "IDF_PATH=$IDF_PATH"
 echo "CONFIG_IDF_VERSION=$CONFIG_IDF_VERSION"
@@ -27,11 +18,11 @@ idf.py build
 
 # Format Output
 [ $? = 0 ] && {
-    TMP_OUTPUT_DIR=$(pwd)/bin
+    TMP_OUTPUT_DIR=$(pwd)/build/output
     rm -rf $TMP_OUTPUT_DIR
     mkdir -p $TMP_OUTPUT_DIR
 
-    fw_version=v$(cat sdkconfig.defaults | grep CONFIG_SW_VERSION | awk -F '"' '{print $2}')
+    fw_version=$(cat sdkconfig.defaults | grep CONFIG_SW_VERSION | awk -F '"' '{print $2}')
 
     cp build/rcp_fw.bin $TMP_OUTPUT_DIR/s20-ot-rcp-fw-$fw_version.bin
     cp build/ota_data_initial.bin $TMP_OUTPUT_DIR/s20-ot-ota-data-initial-$fw_version.bin
@@ -81,12 +72,8 @@ idf.py build
     }
     ' > "$TMP_OUTPUT_DIR/metadata_$SW_VERSION"
 
-    OUTPUT_DIR=$1
-    [ -n "$OUTPUT_DIR" ] && {
-        OUTPUT_DIR=$(realpath $OUTPUT_DIR)
-        mkdir -p $OUTPUT_DIR
-        tar -zcvf $OUTPUT_DIR/blink.tar.gz $TMP_OUTPUT_DIR/*
-    }
+    echo "*******************************************************************************"
+    echo "Saved binary file to $TMP_OUTPUT_DIR"
 
     exit 0
 }
