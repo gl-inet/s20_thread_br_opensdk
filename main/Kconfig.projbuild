@@ -1,0 +1,19 @@
+menu "Firmware version Configuration"
+
+    config SDK_VERSION
+        string "SDK Version"
+        default ""
+
+    config SDK_URL
+        string "SDK URL"
+        default ""
+
+    config SDK_HASH
+        string "SDK Hash"
+        default ""
+
+    config SW_VERSION
+        string "SW Version"
+        default ""
+
+endmenu
