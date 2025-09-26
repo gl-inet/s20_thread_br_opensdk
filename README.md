@@ -3,31 +3,52 @@
 ## Getting start
 
 ```
-git clone --recursive https://github.com/gl-inet/s20_thread_br_opensdk.git
-cd s20_thread_br_opensdk/
+$ git clone --recursive https://github.com/gl-inet/s20_thread_br_opensdk.git
+$ cd s20_thread_br_opensdk/
 
-git submodule update --init --recursive
+$ git submodule update --init --recursive
 
 # Install SDK environment
-./install.sh
+$ ./install.sh
 
 # Active SDK environment
-. ./esp-idf/export.sh
+$. ./esp-idf/export.sh
 
 # Build RCP
-cd esp-idf/examples/openthread/ot_rcp/
-idf.py --preview set-target esp32h2
-idf.py build
-cd -
+$ cd esp-idf/examples/openthread/ot_rcp/
+$ idf.py --preview set-target esp32h2
+$ idf.py build
+$ cd -
 
 # Build Host
-idf.py --preview set-target esp32s3
-idf.py build
+$ idf.py --preview set-target esp32s3
+$ idf.py build
 ```
+
+- **Automated build process**
+
+```
+$ ./script/ci_build
+
+$ tree build/output/
+├── list.txt
+├── metadata_v1.0.0
+├── s20-ot-bootloader-v1.0.0.bin
+├── s20-ot-br-v1.0.0.bin
+├── s20-ot-br-v1.0.0.elf
+├── s20-ot-combine-v1.0.0.bin
+├── s20-ot-flash-args-v1.0.0.txt
+├── s20-ot-ota-data-initial-v1.0.0.bin
+├── s20-ot-partition-table-v1.0.0.bin
+├── s20-ot-rcp-fw-v1.0.0.bin
+└── s20-ot-web-storage-v1.0.0.bin
+```
+
+The binary files will generate in `build/output`.
 
 ## Work with Home Assistant
 
-### Installing the Open Thread Border Router and Thread Intergration[¶](https://docs.gl-inet.com/iot/en/thread_board_router/gl-s200/work_with_home_assistant/#installing-the-open-thread-border-router-and-thread-intergration)
+### Installing the Open Thread Border Router and Thread Intergration
 
 The Open Thread Border Router integration allows Home Assistant to acess Open Thread Border Router.
 
