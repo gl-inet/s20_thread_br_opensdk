@@ -8,21 +8,30 @@ $ cd s20_thread_br_opensdk/
 
 $ git submodule update --init --recursive
 
-# Install SDK environment
+### Install SDK environment
 $ ./install.sh
 
 # Active SDK environment
 $. ./esp-idf/export.sh
 
-# Build RCP
+### Build RCP
 $ cd esp-idf/examples/openthread/ot_rcp/
 $ idf.py --preview set-target esp32h2
 $ idf.py build
 $ cd -
 
-# Build Host
+### Build Host
 $ idf.py --preview set-target esp32s3
 $ idf.py build
+
+### Flash
+$ idf.py -p /dev/ttyUSB0 flash
+
+### Monitor
+$ idf.py -p /dev/ttyUSB0 monitor
+
+### Exit monitor
+Ctrl + ]
 ```
 
 - **Automated build process**
@@ -45,6 +54,30 @@ $ tree build/output/
 ```
 
 The binary files will generate in `build/output`.
+
+## Flashing by GUI tool
+
+Click the link https://www.espressif.com/en/support/download/other-tools to download `Flash Download Tools`.
+
+1. Extract flash_download_tool, and execute flash_download_tool.exe.
+
+![s20_flash_guide_program](https://static.gl-inet.com/docs/iot/en/thread_board_router/gl-s20/user_manual/s20_flash_image/s20_flash_guide_program.png)
+
+2. Select ESP32-S3,then click OK.
+
+![s20_flash_guide_chip](https://static.gl-inet.com/docs/iot/en/thread_board_router/gl-s20/user_manual/s20_flash_image/s20_flash_guide_chip.png)
+
+3. Flash bin file
+
+First, select serial port then erase the flash and start flashing. The flash address can be found in the file `s20-ot-flash-args-v1.0.0.txt`
+
+- Flashing multi-binary
+
+![image-20250926165124606](docs/images/image-20250926165124606.png)
+
+- Flashing combine binary
+
+![image-20250926165851651](docs/images/image-20250926165851651.png)
 
 ## Work with Home Assistant
 
