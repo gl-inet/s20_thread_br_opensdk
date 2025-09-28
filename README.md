@@ -67,7 +67,7 @@ Click the link https://www.espressif.com/en/support/download/other-tools to down
 
 ![s20_flash_guide_chip](https://static.gl-inet.com/docs/iot/en/thread_board_router/gl-s20/user_manual/s20_flash_image/s20_flash_guide_chip.png)
 
-3. Flash bin file
+3. For Flash binary files, you can choose either the "Flashing multi-binary" or "Flashing combine binary" method according to your needs.
 
 First, select serial port then erase the flash and start flashing. The flash address can be found in the file `s20-ot-flash-args-v1.0.0.txt`
 
